@@ -11,6 +11,8 @@ export default function RegisterPage() {
     displayName: '',
     email: '',
     password: '',
+    role: 'BUYER',
+    storeName: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,15 +20,19 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validation ความยาวรหัสผ่านเบื้องต้น
+    if (formData.password.length < 6) {
+      setError('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await api.post('/auth/register', formData);
-      
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
-      
-      router.push('/');
+      await api.post('/auth/register', formData);
+      alert('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
+      router.push('/login');
     } catch (err: any) {
       setError(err.response?.data?.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก');
     } finally {
@@ -85,9 +91,53 @@ export default function RegisterPage() {
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               className="w-full bg-void border border-line rounded-xl px-4 py-2.5 text-sm text-ink outline-none focus:border-tingle transition"
-              placeholder="••••••••"
+              placeholder="อย่างน้อย 6 ตัวอักษร"
             />
           </div>
+
+          {/* เลือกบทบาทผู้ใช้งาน */}
+          <div>
+            <label className="block text-xs font-medium text-ink-muted mb-1.5">ประเภทบัญชี</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, role: 'BUYER' })}
+                className={`py-2 rounded-xl border text-xs font-medium transition ${
+                  formData.role === 'BUYER'
+                    ? 'bg-tingle/10 border-tingle text-tingle'
+                    : 'bg-void border-line text-ink-muted'
+                }`}
+              >
+                🎧 ผู้ฟัง (Buyer)
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, role: 'SELLER' })}
+                className={`py-2 rounded-xl border text-xs font-medium transition ${
+                  formData.role === 'SELLER'
+                    ? 'bg-tingle/10 border-tingle text-tingle'
+                    : 'bg-void border-line text-ink-muted'
+                }`}
+              >
+                🎙️ ครีเอเตอร์ (Seller)
+              </button>
+            </div>
+          </div>
+
+          {/* กรอกชื่อร้านหากเลือกเป็น SELLER */}
+          {formData.role === 'SELLER' && (
+            <div>
+              <label className="block text-xs font-medium text-ink-muted mb-1.5">ชื่อร้านค้า / แชนเนล</label>
+              <input
+                type="text"
+                required
+                value={formData.storeName}
+                onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
+                className="w-full bg-void border border-line rounded-xl px-4 py-2.5 text-sm text-ink outline-none focus:border-tingle transition"
+                placeholder="เช่น Wisp Sound Studio"
+              />
+            </div>
+          )}
 
           <button
             type="submit"

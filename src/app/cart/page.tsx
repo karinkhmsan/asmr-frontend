@@ -3,110 +3,115 @@
 import { useEffect, useState } from 'react';
 import Navbar from '../../components/Navbar';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 interface Product {
   id: string;
   title: string;
   price: number;
   coverImageUrl: string;
-  seller?: {
-    storeName: string;
-  };
+  previewAudioUrl?: string;
+  audioFileUrl?: string;
+  seller?: { storeName: string };
 }
 
 export default function CartPage() {
-  const [cartItems, setCartItems] = useState<Product[]>([]);
-  const router = useRouter();
+  const [cart, setCart] = useState<Product[]>([]);
 
   useEffect(() => {
-    // ดึงข้อมูลตะกร้าจาก localStorage
-    const items = JSON.parse(localStorage.getItem('cart') || '[]');
-    setCartItems(items);
+    const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
+    setCart(savedCart);
   }, []);
 
   const removeItem = (id: string) => {
-    const updatedCart = cartItems.filter((item) => item.id !== id);
-    setCartItems(updatedCart);
+    const updatedCart = cart.filter((item) => item.id !== id);
+    setCart(updatedCart);
     localStorage.setItem('cart', JSON.stringify(updatedCart));
+    window.dispatchEvent(new Event('storage'));
   };
 
-  const handleCheckout = () => {
-    if (cartItems.length === 0) return;
-    alert('ชำระเงินสำเร็จ! เพิ่มผลงานเข้าคลังเรียบร้อยแล้ว');
-    // เคลียร์ตะกร้า
-    localStorage.removeItem('cart');
-    setCartItems([]);
-    // ย้ายไปหน้าคลังผลงาน
-    router.push('/library');
-  };
-
-  const total = cartItems.reduce((acc, item) => acc + Number(item.price), 0);
+  const total = cart.reduce((acc, item) => acc + Number(item.price), 0);
 
   return (
-    <main className="min-h-screen bg-void text-ink pb-12">
+    <main className="min-h-screen bg-[#17151B] text-[#F1ECE6] font-sans pb-20">
       <Navbar />
 
-      <div className="max-w-4xl mx-auto px-6 pt-10">
-        <h1 className="text-2xl font-bold text-tingle mb-6">ตะกร้าสินค้า / ชำระเงิน</h1>
+      <div className="max-w-[1180px] mx-auto px-8 pt-10">
+        <div className="mb-8">
+          <div className="text-[12px] uppercase tracking-wider text-[#8C93E8] font-semibold mb-1">
+            Shopping Cart
+          </div>
+          <h1 className="font-serif text-3xl font-medium">ตะกร้าสินค้า</h1>
+        </div>
 
-        {cartItems.length === 0 ? (
-          <div className="text-center py-20 bg-panel border border-line rounded-2xl">
-            <p className="text-ink-muted text-sm mb-4">ยังไม่มีรายการสินค้าในตะกร้า</p>
-            <Link href="/" className="text-xs bg-tingle text-[#1A1418] font-bold px-4 py-2.5 rounded-xl inline-block">
-              เลือกชมผลงาน
+        {cart.length === 0 ? (
+          <div className="bg-[#201D26] border border-[#322E3B] rounded-[14px] p-12 text-center">
+            <p className="text-xs text-[#9C96A8] mb-4">ไม่มีสินค้าในตะกร้าของคุณ</p>
+            <Link
+              href="/"
+              className="px-5 py-2.5 rounded-full bg-[#E98368] text-[#1A1418] font-semibold text-xs hover:bg-[#f0967c] transition inline-block"
+            >
+              เลือกซื้อเสียง ASMR
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* รายการสินค้า */}
-            <div className="md:col-span-2 space-y-4">
-              {cartItems.map((item) => (
-                <div key={item.id} className="bg-panel border border-line p-4 rounded-2xl flex items-center gap-4">
-                  <img
-                    src={item.coverImageUrl || 'https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?q=80&w=600'}
-                    alt={item.title}
-                    className="w-20 h-20 object-cover rounded-xl border border-line"
-                  />
-                  <div className="flex-1">
-                    <p className="text-[10px] text-tingle font-semibold uppercase">
-                      {item.seller?.storeName || 'ASMR Creator'}
-                    </p>
-                    <h3 className="text-sm font-bold text-ink">{item.title}</h3>
-                    <p className="text-sm font-semibold text-tingle mt-1">฿{Number(item.price).toLocaleString()}</p>
+            <div className="lg:col-span-8 space-y-4">
+              {cart.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-[#201D26] border border-[#322E3B] rounded-[14px] p-4 flex items-center justify-between gap-4"
+                >
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={item.coverImageUrl || 'https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?q=80&w=600'}
+                      alt={item.title}
+                      className="w-16 h-16 object-cover rounded-lg border border-[#322E3B]"
+                    />
+                    <div>
+                      <h3 className="font-semibold text-sm text-[#F1ECE6]">{item.title}</h3>
+                      <p className="text-xs text-[#9C96A8]">{item.seller?.storeName || 'ASMR Creator'}</p>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => removeItem(item.id)}
-                    className="text-xs text-red-400 hover:text-red-300 px-2 py-1"
-                  >
-                    ลบ
-                  </button>
+
+                  <div className="flex items-center gap-6">
+                    <span className="font-mono text-[#E98368] font-semibold text-sm">
+                      ฿{Number(item.price).toLocaleString()}
+                    </span>
+                    <button
+                      onClick={() => removeItem(item.id)}
+                      className="text-xs text-red-400 hover:text-red-300 transition"
+                    >
+                      ลบ
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
 
             {/* สรุปยอดเงิน */}
-            <div className="bg-panel border border-line p-6 rounded-2xl h-fit">
-              <h2 className="text-lg font-bold mb-4 border-b border-line pb-3">สรุปคำสั่งซื้อ</h2>
-              <div className="flex justify-between text-sm text-ink-muted mb-2">
-                <span>ราคารวม</span>
-                <span>฿{total.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-sm text-ink-muted mb-6">
-                <span>ค่าธรรมเนียม</span>
-                <span>฿0</span>
-              </div>
-              <div className="flex justify-between text-base font-bold text-ink border-t border-line pt-3 mb-6">
-                <span>ยอดชำระสุทธิ</span>
-                <span className="text-tingle">฿{total.toLocaleString()}</span>
-              </div>
+            <div className="lg:col-span-4">
+              <div className="bg-[#201D26] border border-[#322E3B] rounded-[14px] p-6 sticky top-24">
+                <h2 className="font-serif text-xl font-medium mb-4">สรุปคำสั่งซื้อ</h2>
+                
+                <div className="space-y-3 text-xs border-b border-[#322E3B] pb-4 mb-4">
+                  <div className="flex justify-between text-[#9C96A8]">
+                    <span>จำนวนสินค้า</span>
+                    <span>{cart.length} ชิ้น</span>
+                  </div>
+                  <div className="flex justify-between text-[#F1ECE6] text-sm font-semibold pt-2">
+                    <span>ราคารวมสุทธิ</span>
+                    <span className="font-mono text-[#E98368]">฿{total.toLocaleString()}</span>
+                  </div>
+                </div>
 
-              <button
-                onClick={handleCheckout}
-                className="w-full bg-tingle text-[#1A1418] font-bold py-3.5 rounded-xl hover:bg-[#f0967c] transition"
-              >
-                ยืนยันสั่งซื้อและชำระเงิน
-              </button>
+                <Link
+                  href="/checkout"
+                  className="w-full py-3 rounded-full bg-[#E98368] text-[#1A1418] font-semibold text-xs hover:bg-[#f0967c] transition block text-center shadow-lg"
+                >
+                  ไปที่หน้าชำระเงิน →
+                </Link>
+              </div>
             </div>
           </div>
         )}

@@ -18,12 +18,21 @@ export default function LoginPage() {
 
     try {
       const res = await api.post('/auth/login', formData);
+      const { token, user } = res.data;
       
-      // บันทึก token และ user ให้ตรงกับที่ Backend ส่งมา
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
+      // บันทึก token และ user ลง localStorage
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       
-      router.push('/');
+      // แจ้งเตือน Navbar และคอมโพเนนต์อื่นให้อัปเดตสถานะทันที
+      window.dispatchEvent(new Event('storage'));
+      
+      // นำทางตามบทบาท (Role) ของผู้ใช้งาน
+      if (user.role === 'SELLER') {
+        router.push('/creator/dashboard');
+      } else {
+        router.push('/');
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
     } finally {

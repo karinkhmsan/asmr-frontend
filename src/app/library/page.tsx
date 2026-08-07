@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import Navbar from '../../components/Navbar';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { api } from '../../lib/api';
 
 interface Product {
   id: string;
@@ -16,14 +18,35 @@ interface Product {
 }
 
 export default function LibraryPage() {
+  const router = useRouter();
   const [purchasedItems, setPurchasedItems] = useState<Product[]>([]);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // ดึงรายการที่ซื้อสำเร็จ (จำลองจาก LocalStorage หรือ API)
-    const items = JSON.parse(localStorage.getItem('purchased_items') || '[]');
-    setPurchasedItems(items);
-  }, []);
+    // 1. เช็กการเข้าสู่ระบบ
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) {
+      router.push('/login');
+      return;
+    }
+
+    // 2. ดึงคลังเสียงที่สั่งซื้อแล้วจาก API (Fallback ด้วย LocalStorage เผื่อกรณีทดสอบ Offline)
+    const fetchLibrary = async () => {
+      try {
+        const res = await api.get('/orders/my-library');
+        setPurchasedItems(res.data);
+      } catch (err) {
+        console.error('Failed to load library from API, fallback to local storage:', err);
+        const localItems = JSON.parse(localStorage.getItem('purchased_items') || '[]');
+        setPurchasedItems(localItems);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLibrary();
+  }, [router]);
 
   const handleDownload = (url: string, title: string) => {
     if (!url) {
@@ -42,7 +65,6 @@ export default function LibraryPage() {
       <Navbar />
 
       <div className="max-w-[1180px] mx-auto px-8 pt-10">
-        
         {/* Header */}
         <div className="mb-8">
           <div className="text-[12px] uppercase tracking-wider text-[#8C93E8] font-semibold mb-1">
@@ -52,7 +74,9 @@ export default function LibraryPage() {
           <p className="text-xs text-[#9C96A8] mt-1">ผลงาน ASMR ทั้งหมดที่คุณเป็นเจ้าของ ดาวน์โหลดและฟังได้ตลอดเวลา</p>
         </div>
 
-        {purchasedItems.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-20 text-xs text-[#9C96A8]">กำลังโหลดคลังผลงานของคุณ...</div>
+        ) : purchasedItems.length === 0 ? (
           <div className="bg-[#201D26] border border-[#322E3B] rounded-[14px] p-12 text-center">
             <p className="text-xs text-[#9C96A8] mb-4">คุณยังไม่มีผลงานเสียงในคลังส่วนตัว</p>
             <Link

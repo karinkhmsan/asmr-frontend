@@ -1,12 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../../components/Navbar';
 import { api } from '../../../lib/api';
 
+interface Category {
+  id: string;
+  name: string;
+}
+
 export default function UploadProductPage() {
   const router = useRouter();
+
+  // 1. ตรวจสอบสิทธิ์ผู้ใช้งาน (เฉพาะ SELLER)
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) {
+      router.push('/login');
+      return;
+    }
+
+    const user = JSON.parse(storedUser);
+    if (user.role !== 'SELLER') {
+      alert('หน้านี้เฉพาะครีเอเตอร์เท่านั้นครับ');
+      router.push('/');
+    }
+  }, [router]);
+
+  // State สำหรับเก็บข้อมูลหมวดหมู่
+  const [categories, setCategories] = useState<Category[]>([]);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -17,20 +41,46 @@ export default function UploadProductPage() {
     language: 'TH',
     categoryId: '',
   });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // 2. ดึงข้อมูลหมวดหมู่จาก Backend
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.get('/categories');
+        if (res.data && res.data.length > 0) {
+          setCategories(res.data);
+          setFormData((prev) => ({ ...prev, categoryId: res.data[0].id }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch categories:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!formData.categoryId) {
+      setError('กรุณาเลือกหมวดหมู่สินค้า');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await api.post('/products', formData);
+      await api.post('/products', {
+        ...formData,
+        price: parseFloat(formData.price),
+      });
       alert('สร้างผลงาน ASMR สำเร็จ!');
-      router.push('/');
+      router.push('/creator/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'เกิดข้อผิดพลาดในการสร้างผลงาน');
+      setError(err.response?.data?.message || 'เกิดข้อผิดพลาดในการสร้างผลงาน');
     } finally {
       setLoading(false);
     }
@@ -75,7 +125,7 @@ export default function UploadProductPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium text-ink-muted mb-1.5">ราคา (บาท)</label>
               <input
@@ -87,6 +137,25 @@ export default function UploadProductPage() {
                 className="w-full bg-void border border-line rounded-xl px-4 py-2.5 text-sm text-ink outline-none focus:border-tingle transition"
                 placeholder="150"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-ink-muted mb-1.5">หมวดหมู่</label>
+              <select
+                value={formData.categoryId}
+                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                className="w-full bg-void border border-line rounded-xl px-4 py-2.5 text-sm text-ink outline-none focus:border-tingle transition"
+              >
+                {categories.length === 0 ? (
+                  <option value="">กำลังโหลดหมวดหมู่...</option>
+                ) : (
+                  categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))
+                )}
+              </select>
             </div>
 
             <div>

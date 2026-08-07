@@ -1,81 +1,112 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+interface UserData {
+  displayName?: string;
+  role?: string;
+}
 
 export default function Navbar() {
-  const [cartCount, setCartCount] = useState(0);
+  const router = useRouter();
+  const [isClient, setIsClient] = useState(false);
+  const [userData, setUserData] = useState<UserData | null>(null);
 
-  // ซิงค์จำนวนสินค้าในตะกร้าจาก localStorage
+  const checkUser = () => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUserData(JSON.parse(storedUser));
+      } catch {
+        setUserData(null);
+      }
+    } else {
+      setUserData(null);
+    }
+  };
+
   useEffect(() => {
-    const updateCartCount = () => {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      setCartCount(cart.length);
-    };
+    setIsClient(true);
+    checkUser();
 
-    updateCartCount();
-    window.addEventListener('storage', updateCartCount);
-    return () => window.removeEventListener('storage', updateCartCount);
+    window.addEventListener('storage', checkUser);
+    return () => window.removeEventListener('storage', checkUser);
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUserData(null);
+    router.push('/login');
+    router.refresh();
+  };
+
+  // เช็กว่าเป็น ครีเอเตอร์/ผู้ขาย หรือไม่
+  const isSeller = userData?.role === 'SELLER';
+
   return (
-    <header className="sticky top-0 z-50 bg-void/90 backdrop-blur-md border-b border-line">
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        
-        {/* โลโก้ Wisp ตามสไตล์เดิม */}
-        <Link href="/" className="text-2xl font-black italic tracking-wider text-ink flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-tingle animate-pulse"></span>
+    <nav className="border-b border-line bg-panel/80 backdrop-blur-md sticky top-0 z-50 px-8 py-4">
+      <div className="max-w-[1180px] mx-auto flex items-center justify-between">
+        {/* Logo */}
+        <Link href="/" className="font-serif italic font-medium text-2xl flex items-center gap-2 text-ink">
+          <span className="w-2 h-2 rounded-full bg-tingle" />
           wisp
         </Link>
 
-        {/* เมนูนำทางตรงกลาง ซิงค์ Class สีตาม HTML เดิม */}
-        <nav className="hidden md:flex items-center gap-6 text-xs font-semibold">
+        {/* Navigation Links */}
+        <div className="flex items-center gap-6 text-xs font-semibold">
           <Link href="/" className="text-ink-muted hover:text-ink transition">
-            สำรวจ
+            หน้าแรก
           </Link>
-          <Link href="/library" className="text-ink-muted hover:text-ink transition">
-            คลังของฉัน
-          </Link>
-          <Link href="/creator/dashboard" className="text-ink-muted hover:text-tingle transition">
-            🎨 Creator Center
-          </Link>
-        </nav>
 
-        {/* ฝั่งขวา: ตะกร้าสินค้า + ปุ่มสร้างผลงาน */}
-        <div className="flex items-center gap-4">
-          
-          {/* ปุ่มตะกร้าพร้อม Badge แจ้งเตือนสี Tingle */}
-          <Link
-            href="/cart"
-            className="relative p-2 bg-panel border border-line rounded-xl hover:border-tingle/50 transition text-ink"
-            title="ตะกร้าสินค้า"
-          >
-            🛒
-            {cartCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-tingle text-[#1A1418] font-bold text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
-                {cartCount}
+          {isClient && userData && (
+            <>
+              <Link href="/library" className="text-ink-muted hover:text-tingle transition">
+                🎧 คลังของฉัน
+              </Link>
+              <Link href="/cart" className="text-ink-muted hover:text-tingle transition">
+                🛒 ตะกร้าสินค้า
+              </Link>
+              
+              {/* 🔴 โชว์ปุ่มนี้เฉพาะเมื่อ role === 'SELLER' เท่านั้น */}
+              {isSeller && (
+                <Link href="/creator/dashboard" className="text-tingle hover:underline flex items-center gap-1">
+                  📊 แดชบอร์ดร้านค้า
+                </Link>
+              )}
+            </>
+          )}
+
+          {/* User Profile */}
+          {isClient && userData ? (
+            <div className="flex items-center gap-3 pl-4 border-l border-line">
+              <span className="text-ink">
+                🎧 {userData.displayName || 'ผู้ใช้งาน'}
               </span>
-            )}
-          </Link>
-
-          {/* ปุ่มอัปโหลดผลงานใหม่ */}
-          <Link
-            href="/creator/upload"
-            className="text-xs font-bold bg-tingle text-[#1A1418] px-3.5 py-2 rounded-xl hover:bg-[#f0967c] transition shadow-md"
-          >
-            + วางขายเสียง
-          </Link>
-
-          {/* ปุ่มออกจากระบบ */}
-          <Link
-            href="/login"
-            className="text-xs border border-line bg-panel hover:bg-void text-ink-muted hover:text-ink px-3 py-2 rounded-xl transition"
-          >
-            ออกจากระบบ
-          </Link>
+              <button
+                onClick={handleLogout}
+                className="text-red-400 hover:text-red-300 transition"
+              >
+                ออกจากระบบ
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 pl-4 border-l border-line">
+              <Link href="/login" className="text-ink-muted hover:text-ink transition">
+                เข้าสู่ระบบ
+              </Link>
+              <Link
+                href="/register"
+                className="bg-tingle text-[#1A1418] px-3.5 py-1.5 rounded-full font-bold hover:bg-[#f0967c] transition"
+              >
+                สมัครสมาชิก
+              </Link>
+            </div>
+          )}
         </div>
-
       </div>
-    </header>
+    </nav>
   );
 }
